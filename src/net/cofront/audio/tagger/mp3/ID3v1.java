@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
 
+import net.cofront.audio.tagger.Util;
+
 public class ID3v1 {
-	public static byte[] TAG = ("TAG").getBytes();
+	public static byte[] TAG_IDENTIFIER = ("TAG").getBytes();
 	
 	public String title;
 	public String artist;
@@ -66,11 +68,11 @@ public class ID3v1 {
 			long tagstart = fsize - 128;
 			
 			raf.seek(tagstart);
-			byte[] tag = new byte[TAG.length];
+			byte[] tag = new byte[TAG_IDENTIFIER.length];
 			raf.read(tag);
 			
 			id3v1[i] = null;
-			if (Arrays.equals(tag, TAG)) {
+			if (Arrays.equals(tag, TAG_IDENTIFIER)) {
 				raf.read(title);
 				raf.read(artist);
 				raf.read(album);
@@ -89,40 +91,28 @@ public class ID3v1 {
 		long tagstart = fsize - 128;
 		
 		raf.seek(tagstart);
-		byte[] tag = new byte[TAG.length];
+		byte[] tag = new byte[TAG_IDENTIFIER.length];
 		raf.read(tag);
 		
-		if (! Arrays.equals(tag, TAG)) {
+		if (! Arrays.equals(tag, TAG_IDENTIFIER)) {
 			raf.setLength(fsize + 128);
 			raf.seek(fsize);
-			raf.write(TAG);
+			raf.write(TAG_IDENTIFIER);
 		}
 		
 		byte[] title = new byte[30];
 		//Arrays.fill(title, this.title.trim().getBytes(), 30);
-		raf.write(fillCopy(this.title.getBytes(), 30, (byte)0));
-		raf.write(fillCopy(this.artist.getBytes(), 30, (byte)0));
-		raf.write(fillCopy(this.album.getBytes(), 30, (byte)0));
-		raf.write(fillCopy(this.year.getBytes(), 4, (byte)0));
-		raf.write(fillCopy(this.comment.getBytes(), 29, (byte)0));
+		raf.write(Util.fillCopy(this.title.getBytes(), 30, (byte)0));
+		raf.write(Util.fillCopy(this.artist.getBytes(), 30, (byte)0));
+		raf.write(Util.fillCopy(this.album.getBytes(), 30, (byte)0));
+		raf.write(Util.fillCopy(this.year.getBytes(), 4, (byte)0));
+		raf.write(Util.fillCopy(this.comment.getBytes(), 29, (byte)0));
 		raf.write((byte)this.track);
 		raf.write((byte)this.genre);
 		
 	}
 	
-	private byte[] fillCopy(byte[] data, int len, byte filler) {
-		byte[] tmp = new byte[len];
-		int dlen = data.length;
-		for(int i=0; i<len; i++) {
-			if (i < dlen) {
-				tmp[i] = data[i];
-			}
-			else {
-				tmp[i] = filler;
-			}
-		}
-		return tmp;
-	}
+	
 	
 	public String toString() {
 		return "[title=" + title + ",artist=" + artist + ",album=" + album + ",year=" + year + ",comment=" + comment + ",track=" + track + ",genre=" + genre + "]";

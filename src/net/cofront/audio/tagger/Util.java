@@ -20,35 +20,69 @@ public class Util {
 		}
 	}
 	
+	public static byte[] fillCopy(byte[] data, int len, byte filler) {
+		byte[] tmp = new byte[len];
+		int dlen = data.length;
+		for(int i=0; i<len; i++) {
+			if (i < dlen) {
+				tmp[i] = data[i];
+			}
+			else {
+				tmp[i] = filler;
+			}
+		}
+		return tmp;
+	}
+	
 	public static final byte[] intToByteArray(int value) {
         return new byte[] {
-                (byte)(value >>> 24),
-                (byte)(value >>> 16),
-                (byte)(value >>> 8),
-                (byte)value};
+	        (byte)(value >>> 24),
+	        (byte)(value >>> 16),
+	        (byte)(value >>> 8),
+	        (byte) value
+	    };
 	}
 	
 	public static final int byteArrayToInt(byte [] b) {
-        return     (b[0] << 24)
-                | ((b[1] & 0xFF) << 16)
-                | ((b[2] & 0xFF) << 8)
-                | ( b[3] & 0xFF);
+        return (
+        	   (b[0] << 24)
+	        | ((b[1] & 0xFF) << 16)
+	        | ((b[2] & 0xFF) << 8)
+	        | ( b[3] & 0xFF)
+	    );
 	}
 	
-	public static final byte[] x28bitIntToByteArray(int value) {
+	/**
+	 * The ID3v2 tag size is encoded with four bytes where the most
+	 * significant bit (bit 7) is set to zero in every byte, making a total
+	 * of 28 bits. The zeroed bits are ignored, so a 257 bytes long tag is
+	 * represented as $00 00 02 01.
+	 * @param value integer less than 28 bits
+	 * @return
+	 */
+	public static final byte[] intToTwentyEightBitByteArray(int value) {
         return new byte[] {
-                (byte)(value >>> 21),
-                (byte)(value >>> 14),
-                (byte)(value >>> 7),
-                (byte)value};
+            (byte)(value >>> 21),
+            (byte)(value >>> 14),
+            (byte)(value >>> 7),
+            (byte)value
+        };
 	}
 	
-	public static final int x28bitByteArrayToInt(byte [] b) {
-        return     (b[0] << 21)
-                | ((b[1] & 0xFF) << 14)
-                | ((b[2] & 0xFF) << 7)
-                | ( b[3] & 0xFF);
+	/**
+	 * The ID3v2 tag size is encoded with four bytes where the most
+	 * significant bit (bit 7) is set to zero in every byte, making a total
+	 * of 28 bits. The zeroed bits are ignored, so a 257 bytes long tag is
+	 * represented as $00 00 02 01.
+	 * @param b byte[2]
+	 * @return
+	 */
+	public static final int twentyEightBitByteArrayToInt(byte [] b) {
+        return (
+        	   (b[0] << 21)
+        	| ((b[1] & 0xFF) << 14)
+        	| ((b[2] & 0xFF) << 7)
+        	| ( b[3] & 0xFF)
+        );
 	}
-
-
 }

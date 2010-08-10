@@ -78,11 +78,11 @@ public class ID3v2Header {
 	 */
 	public int getTagSize() {
 		//return ( size[0] << 21 | size[1] << 14 | size[2] << 7 | size[3] );
-		return Util.x28bitByteArrayToInt(size);
+		return Util.twentyEightBitByteArrayToInt(size);
 	}
 	
 	public int getTotalTagSize() {
-		return Util.x28bitByteArrayToInt(size) + 10;
+		return Util.twentyEightBitByteArrayToInt(size) + 10;
 	}
 	
 	protected void setTagSize(int s) {
@@ -92,7 +92,7 @@ public class ID3v2Header {
 		size[2] = (byte)(s >> 7);
 		size[3] = (byte)(s);
 		*/
-		size = Util.x28bitIntToByteArray(s);
+		size = Util.intToTwentyEightBitByteArray(s);
 	}
 	
 	public byte[] getBytes() {
