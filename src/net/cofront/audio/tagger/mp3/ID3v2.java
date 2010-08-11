@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import net.cofront.audio.tagger.Util;
@@ -40,6 +39,21 @@ public class ID3v2 {
 	private boolean modified = false;
 	
 	private HashMap<String, ArrayList<Frame>> framemap = new HashMap<String, ArrayList<Frame>>();
+	
+	private void checkmodified() throws IOException {
+		if (modified) {
+			getBytes();
+		}
+	}
+	
+	public void setPadding(int psize) {
+		if (eheader3 == null) {
+			eheader3 = new ID3v2.ExtHeader3(Util.intToByteArray(6), new byte[] { 0, 0 }, Util.intToByteArray(psize), new byte[] { 0, 0 } );
+		}
+		else {
+			eheader3.setPaddingSize(psize);
+		}
+	}
 	
 	private synchronized void validatekey(String frameId) {
 		if (! framemap.containsKey(frameId)) {
@@ -105,28 +119,33 @@ public class ID3v2 {
 	/**
 	 * Get the size of the tag, excluding the header.
 	 * @return
+	 * @throws IOException 
 	 */
-	public synchronized int getTagSize() {
+	public synchronized int getTagSize() throws IOException {
+		checkmodified();
 		return header.getTagSize();
 	}
 	
-	/**
+	/* *
 	 * Get the size of the tag, including the header.
 	 * @return
 	 */
-	public synchronized int getTagSizeTotal() {
-		return header.getTagSizeTotal();
-	}
+	//public synchronized int getTagSizeTotal() {
+	//	return header.getTagSizeTotal();
+	//}
 	
-	public synchronized boolean getFlag(byte flag) {
+	public synchronized boolean getFlag(byte flag) throws IOException {
+		checkmodified();
 		return header.getFlag(flag);
 	}
 	
 	/**
 	 * Get the ID3v2 tag version. 
 	 * @return major.minor
+	 * @throws IOException 
 	 */
-	public synchronized String getVersion() {
+	public synchronized String getVersion() throws IOException {
+		checkmodified();
 		byte[] v = header.getVersion();
 		String version = new String(v[0] + "." + v[1]);
 		return version;
@@ -137,28 +156,39 @@ public class ID3v2 {
 		
 		byte[] ehbytes = new byte[0];
 		byte[] fbytes = this.getFramesBytes();
+		byte[] padding;
 		
-		int psize = 0;
+		int psize = 0; // default 0 bytes of padding
 		if (eheader3 != null) {
 			psize = eheader3.getPaddingSize();
+			padding = new byte[psize];
 			ehbytes = eheader3.getBytes();
 		}
-		else if (eheader4 != null) {
-			ehbytes = eheader3.getBytes();
+		else {
+			padding = new byte[psize];
 		}
 		
 		bos.reset();
 		bos.write(ehbytes);
 		bos.write(fbytes);
-		byte[] body = bos.toByteArray();
+
+		byte[] tmp = bos.toByteArray();
+		byte[] body = usync(tmp);
 		
-		// original size
-		int osize = header.getTagSize();
-		
-		if (osize < body.length + psize) {
-			psize = osize - body.length;
+		if (tmp.length != body.length) {
+			header.setFlag(FLAG_UNSYNCHRONIZED, true);
 		}
-		return null;
+		
+		header.setTagSize(body.length + psize);
+		
+		bos.reset();
+		bos.write(header.getBytes());
+		bos.write(ehbytes);
+		bos.write(fbytes);
+		bos.write(padding);
+		
+		modified = false;
+		return bos.toByteArray();
 
 	}
 	
@@ -181,11 +211,6 @@ public class ID3v2 {
 			block[9] <  0x80 	// size
 		) return true;
 		else return false;
-	}
-	
-	private synchronized void recalculatesize() throws IOException {
-		byte[] frames = getFramesBytes();
-		modified = false;
 	}
 	
 	/**
@@ -294,16 +319,16 @@ public class ID3v2 {
 		
 		/**
 		 * Does not include the size of the header (10 bytes).
-		 * Total tag size: getTagSize() + 10
+		 * Total tag size: getTagSize() + 10 + padding
 		 * @return
 		 */
 		public int getTagSize() {
 			return Util.twentyEightBitByteArrayToInt(size);
 		}
 		
-		public int getTagSizeTotal() {
-			return getTagSize() + 10;
-		}
+		//public int getTagSizeTotal() {
+		//	return getTagSize() + 10;
+		//}
 		
 		protected void setTagSize(int size) {
 			this.size = Util.intToTwentyEightBitByteArray(size);
