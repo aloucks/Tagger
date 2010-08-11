@@ -34,6 +34,23 @@ public class Util {
 		return tmp;
 	}
 	
+	/**
+	 * Pushes a byte onto the ride side (block[block.length - 1])
+	 * of a byte array. The first byte of the array (block[0]) 
+	 * is discarded.
+	 * @param b
+	 * @param block
+	 * @return
+	 */
+	public static byte[] rpush(byte b, byte[] block) {
+		int len = block.length;
+		for (int i=1; i<len; i++) {
+			block[i-1] = block[i];
+		}
+		block[len - 1] = b;
+		return block;
+	}
+	
 	public static final byte[] intToByteArray(int value) {
         return new byte[] {
 	        (byte)(value >>> 24),

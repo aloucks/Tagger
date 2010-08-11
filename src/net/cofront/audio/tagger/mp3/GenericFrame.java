@@ -26,6 +26,12 @@ public class GenericFrame implements Frame {
 		this.setFrameData(data);
 		Util.byteCopy(flags, 0, 2, this.flags, 0);
 	}
+	
+	protected GenericFrame(byte[] fheader) {
+		Util.byteCopy(fheader, 0, 4, this.id, 0);
+		Util.byteCopy(fheader, 4, 4, this.size, 0);
+		Util.byteCopy(flags, 8, 2, this.flags, 0);
+	}
 
 	public synchronized void setFrameData(byte[] data) {
 		this.data = data;

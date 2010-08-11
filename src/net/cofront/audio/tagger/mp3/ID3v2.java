@@ -1,6 +1,9 @@
 package net.cofront.audio.tagger.mp3;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,6 +39,62 @@ public class ID3v2 {
 	private ID3v2.ExtHeader3 eheader3;	// ID3v2.3.0
 	private ID3v2.ExtHeader4 eheader4;	// ID3v2.4.0
 	
+	public static void write(File f) {
+		ID3v2 oldtag = null;
+	}
+	
+	public static ID3v2 read(File f) throws FileNotFoundException, IOException {
+		ID3v2 tag = null;
+		int r = 0;
+		byte[] buff;
+		
+		buff = new byte[2048];
+		long bytesRead = 0;
+		
+		// Byte block for detecting the ID3 header 
+		// and for detecting MPEG sync.
+		byte[] block = new byte[10];
+		
+		boolean foundhead = false;
+		boolean foundsync = false;
+		
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		FileInputStream fis = new FileInputStream(f);
+		
+		while ( (r = fis.read(buff)) > -1 ) {
+			for (int i=0; i<r; i++) {
+				Util.rpush(buff[i], block);
+				if (ID3v2.detectHeader(block)) {
+					tag = new ID3v2();
+					tag.header = new ID3v2.Header(block);
+					if (tag.header.version[0] == 0x04) {
+						return null;
+					}
+					int tsize = tag.header.getTagSize();
+					buff = new byte[tsize];
+					r = fis.read(buff);
+					if (r != buff.length) {
+						// something bad happened
+					}
+					if (tag.header.getFlag(FLAG_UNSYNCHRONIZED)) {
+						byte[] tmp = reverseunsync(buff);
+						buff = tmp;
+					}
+					if (tag.header.getFlag(ID3v2.FLAG_EXTENDEDHEADER)) {
+						
+						if (tag.header.version[0] == 0x03) {
+							tag.eheader3 = new ID3v2.ExtHeader3(buff);
+						}
+						else if (tag.header.version[0] == 0x04) {
+							
+						}
+					}
+				}
+			}
+		}
+		return tag;
+	}
+	
 	private boolean modified = false;
 	
 	private HashMap<String, ArrayList<Frame>> framemap = new HashMap<String, ArrayList<Frame>>();
@@ -52,6 +111,15 @@ public class ID3v2 {
 		}
 		else {
 			eheader3.setPaddingSize(psize);
+		}
+	}
+	
+	public int getPaddingSize() {
+		if (eheader3 == null) {
+			return 0;
+		}
+		else {
+			return eheader3.getPaddingSize();
 		}
 	}
 	
