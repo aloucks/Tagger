@@ -51,16 +51,9 @@ public class ID3v2Frame {
 	
 	protected synchronized void setFrameDataSize(int s) {
 		size = Util.intToByteArray(s);
-		/*
-		size[0] = (byte)(s >> 24);
-		size[1] = (byte)(s >> 16);
-		size[2] = (byte)(s >> 8);
-		size[3] = (byte)(s);
-		*/
 	}
 	
 	public synchronized int getFrameDataSize() {
 		return Util.byteArrayToInt(size);
-		//return ( size[0] << 24 | size[1] << 16 | size[2] << 8 | size[3] );
 	}
 }
