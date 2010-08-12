@@ -5,7 +5,7 @@ import java.io.IOException;
 
 import net.cofront.audio.tagger.Util;
 
-public class ID3v2 {
+public abstract class ID3v2 {
 	
 	public final static byte[] TAG_IDENTIFIER = ("ID3").getBytes();
 	

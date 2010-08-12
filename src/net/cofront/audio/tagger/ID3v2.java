@@ -11,6 +11,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import net.cofront.audio.tagger.mp3.ID3v2Exception;
+
 public class ID3v2 {
 	
 	private ID3v2Header header = null;
@@ -34,7 +36,7 @@ public class ID3v2 {
 		return block;
 	}
 	
-	public static ID3v2 read(RandomAccessFile raf) throws IOException, UnexpectedFrameDataException {
+	public static ID3v2 read(RandomAccessFile raf) throws IOException, ID3v2Exception {
 		ID3v2 tag = null;
 		int r;
 		byte[] buff;
@@ -168,7 +170,7 @@ public class ID3v2 {
 					tag.frames.add(frame);
 				}
 				else {
-					throw new UnexpectedFrameDataException("Expected: " + fdatasize + ", Actual: " + fdata.length);
+					throw new ID3v2Exception("Expected: " + fdatasize + ", Actual: " + fdata.length);
 				}
 				
 			}

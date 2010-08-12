@@ -4,20 +4,25 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import net.cofront.audio.tagger.UnexpectedFrameDataException;
+import net.cofront.audio.tagger.mp3.id3v230.ID3v230;
 
 public class NewTest {
 
 	/**
 	 * @param args
-	 * @throws UnexpectedFrameDataException 
+	 * @throws ID3v2Exception 
 	 * @throws IOException 
 	 * @throws FileNotFoundException 
 	 */
-	public static void main(String[] args) throws FileNotFoundException, IOException, UnexpectedFrameDataException {
-		File f = new File("workingdir/source1.mp3");
+	public static void main(String[] args) throws FileNotFoundException, IOException, ID3v2Exception {
+		File f = new File("testfiles/mp3/source1.mp3");
+		long start = System.currentTimeMillis();
 		ID3v2 tag = ID3v230.read(f);
-		System.out.println(tag);
+		tag = ID3v230.read(f);
+		long end = System.currentTimeMillis();
+		System.out.println(end - start);
+		System.out.println("tag="+tag);
+		System.out.println("Wtf");
 	}
 
 }

@@ -6,15 +6,16 @@ import java.io.RandomAccessFile;
 
 import net.cofront.audio.tagger.Test.CloserThread;
 import net.cofront.audio.tagger.mp3.ID3v1;
+import net.cofront.audio.tagger.mp3.ID3v2Exception;
 
 public class Test2 {
 
 	/**
 	 * @param args
 	 * @throws IOException 
-	 * @throws UnexpectedFrameDataException 
+	 * @throws ID3v2Exception 
 	 */
-	public static void main(String[] args) throws IOException, UnexpectedFrameDataException {
+	public static void main(String[] args) throws IOException, ID3v2Exception {
 		System.out.print("Copying files to working dir.. ");
 		Test.CloserThread cThread = new Test.CloserThread();
 		cThread.start();

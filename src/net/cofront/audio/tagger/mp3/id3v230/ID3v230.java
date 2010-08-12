@@ -1,4 +1,4 @@
-package net.cofront.audio.tagger.mp3;
+package net.cofront.audio.tagger.mp3.id3v230;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -14,8 +14,10 @@ import java.util.Set;
 
 import net.cofront.audio.tagger.ID3v2Frame;
 import net.cofront.audio.tagger.Tagger;
-import net.cofront.audio.tagger.UnexpectedFrameDataException;
 import net.cofront.audio.tagger.Util;
+import net.cofront.audio.tagger.mp3.ID3v2;
+import net.cofront.audio.tagger.mp3.ID3v2Exception;
+import net.cofront.audio.tagger.mp3.ID3v2.Header;
 
 /**
  * http://id3.org/d3v2.3.0
@@ -29,17 +31,19 @@ public class ID3v230 extends ID3v2 {
 	final public static byte FLAG_UNSYNCHRONIZED = (1 << (7 - 1)); // bit7 (1st bit)
 	final public static byte FLAG_EXTENDEDHEADER = (1 << (6 - 1)); // bit6 (2nd bit)
 	final public static byte FLAG_EXPERIMENTAL   = (1 << (5 - 1)); // bit5 (3rd bit)
+	private boolean modified = false;
+	private HashMap<String, ArrayList<ID3v230Frame>> framemap = new HashMap<String, ArrayList<ID3v230Frame>>();
 	
 	
 
-	private ID3v2.Header header;
-	private ID3v230.ExtHeader eheader;	// ID3v2.3.0
+	private ID3v230TagHeader header;
+	private ID3v230ExtendedHeader eheader;	// ID3v2.3.0
 	
 	public static void write(File f) {
 		ID3v230 oldtag = null;
 	}
 	
-	public static ID3v230 read(File f) throws FileNotFoundException, IOException, UnexpectedFrameDataException {
+	public static ID3v230 read(File f) throws FileNotFoundException, IOException, ID3v2Exception {
 		ID3v230 tag = null;
 		int r = 0;
 		byte[] buff;
@@ -54,6 +58,17 @@ public class ID3v230 extends ID3v2 {
 		boolean foundsync = false;
 		long tagPosition = 0;
 
+		byte[] fid = new byte[4];
+		byte[] fsize = new byte[4];
+		byte[] fflags = new byte[2];
+		byte[] fheader = new byte[10];
+		byte[] fdata = null;
+		
+		int hbytecount = 0;
+		int fdatasize = 0;
+		int totalframesize = 0;
+		
+		
 		RandomAccessFile ras = new RandomAccessFile(f, "r");
 		
 		while ( !foundtag && !foundsync && (r = ras.read(buff)) > -1 ) {
@@ -64,12 +79,12 @@ public class ID3v230 extends ID3v2 {
 				if (detectHeader(block)) {
 					tagPosition = tagPosition = block.length;
 					tag = new ID3v230();
-					tag.header = new ID3v2.Header(block);
+					tag.header = new ID3v230TagHeader(block);
 					if (tag.header.version[0] != 0x03) {
 						return null;
 					}
 					int tsize = tag.header.getTagSize();
-					System.out.println("tag size = " + tsize);
+					
 					int frameoffset = 0;
 					buff = new byte[tsize];
 					ras.seek(tagPosition);
@@ -84,35 +99,25 @@ public class ID3v230 extends ID3v2 {
 						buff = tmp;
 					}
 					if (tag.header.getFlag(FLAG_EXTENDEDHEADER)) {
-						tag.eheader = new ID3v230.ExtHeader(buff);
+						tag.eheader = new ID3v230ExtendedHeader(buff);
 						frameoffset = tag.eheader.getSize();
 					}
-					byte[] fid = new byte[4];
-					byte[] fsize = new byte[4];
-					byte[] fflags = new byte[2];
-					byte[] fhbuff = new byte[10];
-					int hbytecount = 0;
-					int fdatasize = 0;
-					int totalframesize = 0;
-					byte[] fdata = null;
-					System.out.println("frameoffset = " + frameoffset);
-					System.out.println(new String(buff));
-					System.exit(1);
+					
+					// x will auto be incremented after finding a frame
 					for (int x=frameoffset; x<tsize; x++) {
 						hbytecount++;
-						Util.rpush(buff[x], fhbuff);
-						System.out.println(new String(fhbuff));
+						Util.rpush(buff[x], fheader);
+				
 						// we've read a full frame header
-						if (hbytecount == 10 && ID3v230.Frame.isValidFrameId(fhbuff)) {
-							Util.byteCopy(fhbuff, 0, 4, fid, 0);
-							Util.byteCopy(fhbuff, 4, 4, fsize, 0);
-							Util.byteCopy(fhbuff, 8, 2, fflags, 0);
-							ID3v230.Frame frame = new ID3v230.Frame(fid, fsize, fflags);
+						if (hbytecount == 10 && ID3v230GenericFrame.isValidFrameId(fheader)) {
+
+							ID3v230Frame frame = new ID3v230GenericFrame(fheader);
 							fdatasize = frame.getFrameDataSize();
+							
 							totalframesize += fdatasize;
 							hbytecount = 0;
 
-							System.out.println("fdatasize = " + fdatasize);
+							
 							if (fdatasize < 1) {
 								// Empty frames are invalid. There's padding on this file
 								// but it's not declared in the extended header 
@@ -122,14 +127,15 @@ public class ID3v230 extends ID3v2 {
 							
 							fdata = new byte[fdatasize];
 							Util.byteCopy(buff, x+1, fdatasize, fdata, 0);
+							
 							frame.setFrameData(fdata);
+							x += fdatasize;
 							if (fdatasize == fdata.length) {
 								tag.addFrame(frame);
 							}
 							else {
-								throw new UnexpectedFrameDataException("Expected: " + fdatasize + ", Actual: " + fdata.length);
+								throw new ID3v2Exception("Expected Frame Size: " + fdatasize + ", Actual: " + fdata.length);
 							}
-							
 						}
 					}
 					foundtag = true; 
@@ -146,9 +152,6 @@ public class ID3v230 extends ID3v2 {
 		return tag;
 	}
 	
-	private boolean modified = false;
-	
-	private HashMap<String, ArrayList<Frame>> framemap = new HashMap<String, ArrayList<Frame>>();
 	
 	private void checkmodified() throws IOException {
 		if (modified) {
@@ -158,7 +161,7 @@ public class ID3v230 extends ID3v2 {
 	
 	public void setPadding(int psize) {
 		if (eheader == null) {
-			eheader = new ID3v230.ExtHeader(Util.intToByteArray(6), new byte[] { 0, 0 }, Util.intToByteArray(psize), new byte[] { 0, 0 } );
+			eheader = new ID3v230ExtendedHeader(Util.intToByteArray(6), new byte[] { 0, 0 }, Util.intToByteArray(psize), new byte[] { 0, 0 } );
 		}
 		else {
 			eheader.setPaddingSize(psize);
@@ -176,35 +179,35 @@ public class ID3v230 extends ID3v2 {
 	
 	private synchronized void validatekey(String frameId) {
 		if (! framemap.containsKey(frameId)) {
-			framemap.put(frameId, new ArrayList<Frame>());
+			framemap.put(frameId, new ArrayList<ID3v230Frame>());
 		}
 	}
 	
-	public synchronized void addFrame(Frame frame) {
+	public synchronized void addFrame(ID3v230Frame frame) {
 		modified = true;
 		String frameId = frame.getFrameIdAsString();
 		validatekey(frameId);
 		framemap.get(frameId).add(frame);
 	}
 
-	public synchronized void setFrame(Frame frame) {
+	public synchronized void setFrame(ID3v230Frame frame) {
 		modified = true;
 		String frameId = frame.getFrameIdAsString();
 		validatekey(frameId);
 		removeFrames(frameId);
-		ArrayList<Frame> list = new ArrayList<Frame>();
+		ArrayList<ID3v230Frame> list = new ArrayList<ID3v230Frame>();
 		list.add(frame);
 		framemap.put(frameId, list);
 	}
 	
-	public synchronized void setFrames(String frameId, ArrayList<Frame> frames) {
+	public synchronized void setFrames(String frameId, ArrayList<ID3v230Frame> frames) {
 		modified = true;
 		validatekey(frameId);
 		removeFrames(frameId);
 		framemap.put(frameId, frames);
 	}
 	
-	public synchronized List<Frame> getFrames(String frameId) {
+	public synchronized List<ID3v230Frame> getFrames(String frameId) {
 		validatekey(frameId);
 		return framemap.get(frameId);
 	}
@@ -214,8 +217,8 @@ public class ID3v230 extends ID3v2 {
 		framemap.remove(frameId);
 	}
 	
-	public synchronized ArrayList<Frame> getAllFrames() {
-		ArrayList<Frame> a = new ArrayList<Frame>();
+	public synchronized ArrayList<ID3v230Frame> getAllFrames() {
+		ArrayList<ID3v230Frame> a = new ArrayList<ID3v230Frame>();
 		Set<String> keys = framemap.keySet();
 		Iterator<String> i = keys.iterator();
 		while (i.hasNext()) {
@@ -226,8 +229,8 @@ public class ID3v230 extends ID3v2 {
 	
 	public synchronized byte[] getFramesBytes() throws IOException {
 		ByteArrayOutputStream b = new ByteArrayOutputStream();
-		ArrayList<Frame> a = this.getAllFrames();
-		Iterator<Frame> i = a.iterator();
+		ArrayList<ID3v230Frame> a = this.getAllFrames();
+		Iterator<ID3v230Frame> i = a.iterator();
 		while (i.hasNext()) {
 			byte[] bytes = i.next().getBytes();
 			b.write(bytes);
@@ -358,145 +361,6 @@ public class ID3v230 extends ID3v2 {
 			
 		}
 		return b.toByteArray();
-	}
-	
-	// ---------------------------------------------------------------------------------------
-	
-	
-	
-	public static class ExtHeader {
-		
-		final private ByteArrayOutputStream bos = new ByteArrayOutputStream(10);
-		
-		public final static byte FLAG_CRC = (1 << 6);
-		
-		private byte[] size;	// = new byte[4];
-		private byte[] flags;	// = new byte[2];
-		private byte[] psize;	// = new byte[4];
-		private byte[] crc;		// = new byte[4];
-		
-		protected ExtHeader(byte[] rawtag) {
-			Util.byteCopy(rawtag, 0, 4, size, 0);
-			Util.byteCopy(rawtag, 4, 2, flags, 0);
-			Util.byteCopy(rawtag, 6, 4, psize, 0);
-			if ( getFlag(FLAG_CRC) ) {
-				Util.byteCopy(rawtag, 10, 4, crc, 0);
-			}
-		}
-		
-		protected ExtHeader(byte[] size, byte[] flags, byte[] psize, byte[] crc) {
-			this.size = size;
-			this.flags = flags;
-			this.psize = psize;
-			this.crc = crc;
-		}
-		
-		protected int getSize() {
-			return Util.byteArrayToInt(size);
-		}
-		
-		protected void setSize(int size) {
-			this.size = Util.intToByteArray(size);
-		}
-		
-		protected byte[] getFlags() {
-			return flags;
-		}
-		
-		protected void setFlags(byte[] flags) {
-			this.flags = flags;
-		}
-		
-		protected int getPaddingSize() {
-			return Util.byteArrayToInt(this.psize);
-		}
-		
-		protected void setPaddingSize(int psize) {
-			this.psize = Util.intToByteArray(psize);
-		}
-		
-		/**
-		 * Only the first byte in the flags is looked at.
-		 * @param flag
-		 * @return
-		 */
-		protected boolean getFlag(byte flag) {
-			return (flags[0] & flag) > 0 ? true : false;
-		}
-		
-		public synchronized byte[] getBytes() throws IOException {
-			bos.reset();
-			bos.write(size);
-			bos.write(flags);
-			bos.write(psize);
-			if (getFlag(FLAG_CRC)) {
-				bos.write(crc);
-			}
-			return bos.toByteArray();
-		}
-	}
-	
-	public static class Frame {
-		private byte[] id = new byte[4];
-		private byte[] size = new byte[4];
-		private byte[] flags = new byte[2];
-		private byte[] data = null;
-		
-		public static boolean isValidFrameId(byte[] b) {
-			// Frame IDs are A-Z0-9 only
-			return (
-				(b[0] > 47 && b[0] < 58) || (b[0] > 64 && b[0] < 91) &&
-				(b[1] > 47 && b[1] < 58) || (b[1] > 64 && b[1] < 91) &&
-				(b[2] > 47 && b[2] < 58) || (b[2] > 64 && b[2] < 91) &&
-				(b[3] > 47 && b[3] < 58) || (b[3] > 64 && b[3] < 91)
-			);
-		}
-		
-		public byte[] getBytes() {
-			ByteArrayOutputStream b = new ByteArrayOutputStream(id.length + size.length + flags.length + data.length);
-			try {
-				b.write(id);
-				b.write(size);
-				b.write(flags);
-				b.write(data);
-				return b.toByteArray();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			return null;
-		}
-		
-		protected Frame(byte[] id, byte[] size, byte[] flags) {
-			Util.byteCopy(id, 0, 4, this.id, 0);
-			Util.byteCopy(size, 0, 4, this.size, 0);
-			Util.byteCopy(flags, 0, 2, this.flags, 0);
-		}
-
-		protected synchronized void setFrameData(byte[] data) {
-			this.data = data;
-			this.setFrameDataSize(this.data.length);
-		}
-		
-		public byte[] getFrameId() {
-			return this.id;
-		}
-		
-		public String getFrameIdAsString() {
-			return String.valueOf(id);
-		}
-		
-		public synchronized byte[] getFrameData() {
-			return this.data;
-		}
-		
-		protected synchronized void setFrameDataSize(int s) {
-			size = Util.intToByteArray(s);
-		}
-		
-		public synchronized int getFrameDataSize() {
-			return Util.byteArrayToInt(size);
-		}
 	}
 
 }

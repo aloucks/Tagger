@@ -1,8 +1,8 @@
-package net.cofront.audio.tagger.mp3;
+package net.cofront.audio.tagger.mp3.id3v230;
 
 import java.io.IOException;
 
-public interface Frame {
+public interface ID3v230Frame {
 	/**
 	 * Return the entire frame as raw bytes.
 	 * @return
@@ -17,6 +17,10 @@ public interface Frame {
 	
 	public void setFrameData(byte[] data);
 	
+	public int getFrameDataSize();
+	
+	public void setFrameDataSize(int size);
+	
 	public byte[] getFrameId();
 	
 	public String getFrameIdAsString();
@@ -25,6 +29,5 @@ public interface Frame {
 	
 	public byte[] getFlags();
 	
-	public void setFlags(byte[] flags);
-	
+	public void setFlags(byte[] flags);	
 }

@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Stack;
 
 import net.cofront.audio.tagger.mp3.ID3v1;
+import net.cofront.audio.tagger.mp3.ID3v2Exception;
 
 public class Test {
 	public static String NL = System.getProperty("line.separator");
@@ -22,9 +23,9 @@ public class Test {
 	 * @param args
 	 * @throws IOException 
 	 * @throws InterruptedException 
-	 * @throws UnexpectedFrameDataException 
+	 * @throws ID3v2Exception 
 	 */
-	public static void main(String[] args) throws IOException, InterruptedException, UnexpectedFrameDataException {
+	public static void main(String[] args) throws IOException, InterruptedException, ID3v2Exception {
 		
 		byte[] source = new byte[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
 		byte[] dest = new byte[3];
@@ -69,7 +70,7 @@ public class Test {
 			try {
 				System.out.println( "\n" + file[i].getName());
 				id3v2 = ID3v2.read(rafArray[i]);
-			} catch (UnexpectedFrameDataException e) {
+			} catch (ID3v2Exception e) {
 				e.printStackTrace();
 				cThread.isRunning = false;
 			}
