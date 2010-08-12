@@ -43,6 +43,52 @@ public class ID3v230 extends ID3v2 {
 		ID3v230 oldtag = null;
 	}
 	
+	public static void removeTag(File f) throws FileNotFoundException, IOException, ID3v2Exception {
+		//ID3v230 tag = read(f);
+		//if (tag != null) {
+			RandomAccessFile raf = new RandomAccessFile(f, "rw");
+			raf.seek(0);
+			//tag.getTagSize();
+			//System.out.println(tag.getTagSize());
+			boolean foundtag = false;
+			boolean foundsync = false;
+			int r = 0;
+			byte[] buff = new byte[2048];
+			long tagPosition = 0;
+			byte[] header = new byte[10];
+			byte[] sbytes = new byte[4];
+			while ( !foundtag && !foundsync && (r = raf.read(buff)) > -1 ) {
+				for (int i=0; i<r; i++) {
+					tagPosition++;
+					Util.rpush(buff[i], header);
+					if (detectHeader(header)) {
+						
+						Util.byteCopy(header, 6, 4, sbytes, 0);
+						
+						tagPosition = tagPosition - header.length;
+						foundtag = true;
+						break;
+					}
+					/*
+					if ( (header[0] & SYNCBYTES_MASK[0]) > 0 &&  (header[1] & SYNCBYTES_MASK[1]) > 0 ) {
+						System.out.println("Found sync: " + i);
+						foundsync = true;
+						break;
+					}
+					*/
+				}
+			}
+			int tsize = Util.twentyEightBitByteArrayToInt(sbytes) + header.length; //tag.getTagSize() + header.length;
+			
+			System.out.println("tsize="+tsize);
+			System.out.println("tagpos="+tagPosition);
+			raf.seek(tagPosition);
+			byte[] zero = new byte[tsize];
+			raf.write(zero);
+			
+		//}
+	}
+	
 	public static ID3v230 read(File f) throws FileNotFoundException, IOException, ID3v2Exception {
 		ID3v230 tag = null;
 		int r = 0;
@@ -52,7 +98,7 @@ public class ID3v230 extends ID3v2 {
 		
 		// Byte block for detecting the ID3 header 
 		// and for detecting MPEG sync.
-		byte[] block = new byte[10];
+		byte[] header = new byte[10];
 		
 		boolean foundtag  = false;
 		boolean foundsync = false;
@@ -68,18 +114,17 @@ public class ID3v230 extends ID3v2 {
 		int fdatasize = 0;
 		int totalframesize = 0;
 		
+		RandomAccessFile raf = new RandomAccessFile(f, "r");
 		
-		RandomAccessFile ras = new RandomAccessFile(f, "r");
-		
-		while ( !foundtag && !foundsync && (r = ras.read(buff)) > -1 ) {
+		while ( !foundtag && !foundsync && (r = raf.read(buff)) > -1 ) {
 			
 			for (int i=0; i<r; i++) {
 				tagPosition++;
-				Util.rpush(buff[i], block);
-				if (detectHeader(block)) {
-					tagPosition = tagPosition = block.length;
+				Util.rpush(buff[i], header);
+				if (detectHeader(header)) {
+					tagPosition = tagPosition - header.length;
 					tag = new ID3v230();
-					tag.header = new ID3v230TagHeader(block);
+					tag.header = new ID3v230TagHeader(header);
 					if (tag.header.version[0] != 0x03) {
 						return null;
 					}
@@ -87,8 +132,8 @@ public class ID3v230 extends ID3v2 {
 					
 					int frameoffset = 0;
 					buff = new byte[tsize];
-					ras.seek(tagPosition);
-					r = ras.read(buff);
+					raf.seek(tagPosition);
+					r = raf.read(buff);
 					
 					if (r != buff.length) {
 						// something bad happened
@@ -139,14 +184,16 @@ public class ID3v230 extends ID3v2 {
 						}
 					}
 					foundtag = true; 
-					Tagger.close(ras);
+					Tagger.close(raf);
 					break;
 				}
-				if ( (block[0] & SYNCBYTES_MASK[0]) > 0 &&  (block[1] & SYNCBYTES_MASK[1]) > 0 ) {
+				/*
+				if ( (header[0] & SYNCBYTES_MASK[0]) > 0 &&  (header[1] & SYNCBYTES_MASK[1]) > 0 ) {
 					System.out.println("Found sync: " + i);
 					foundsync = true;
 					break;
 				}
+				*/
 			}
 		}
 		return tag;

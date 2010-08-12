@@ -1,9 +1,12 @@
 package net.cofront.audio.tagger.mp3;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
 
+import net.cofront.audio.tagger.Tagger;
 import net.cofront.audio.tagger.Util;
 
 public class ID3v1 {
@@ -48,6 +51,17 @@ public class ID3v1 {
 	
 	public static ID3v1 read(RandomAccessFile raf) throws IOException {
 		return read(new RandomAccessFile[] { raf })[0];
+	}
+	
+	public static void removeTag(File f) throws IOException {
+		RandomAccessFile raf = new RandomAccessFile(f, "rw");
+		raf.seek(raf.length() - 128);
+		byte[] tag = new byte[TAG_IDENTIFIER.length];
+		raf.read(tag);
+		if (Arrays.equals(tag, TAG_IDENTIFIER)) {
+			raf.setLength(raf.length() - 128);
+			Tagger.close(raf);
+		}
 	}
 	
 	public static ID3v1[] read(RandomAccessFile[] rafArray) throws IOException {
