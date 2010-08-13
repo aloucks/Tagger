@@ -51,19 +51,20 @@ public class ID3v230 extends ID3v2 {
 			//tag.getTagSize();
 			//System.out.println(tag.getTagSize());
 			boolean foundtag = false;
-			boolean foundsync = false;
+			//boolean foundsync = false;
 			int r = 0;
 			byte[] buff = new byte[2048];
 			long tagPosition = 0;
 			byte[] header = new byte[10];
-			byte[] sbytes = new byte[4];
-			while ( !foundtag && !foundsync && (r = raf.read(buff)) > -1 ) {
+			byte[] size = new byte[] { 0x00, 0x00, 0x00, 0x00 }; //new byte[4];
+			//while ( !foundtag && !foundsync && (r = raf.read(buff)) > -1 ) {
+			while ( !foundtag && (r = raf.read(buff)) > -1 ) {
 				for (int i=0; i<r; i++) {
 					tagPosition++;
 					Util.rpush(buff[i], header);
 					if (detectHeader(header)) {
 						
-						Util.byteCopy(header, 6, 4, sbytes, 0);
+						Util.byteCopy(header, 6, 4, size, 0);
 						
 						tagPosition = tagPosition - header.length;
 						foundtag = true;
@@ -78,14 +79,26 @@ public class ID3v230 extends ID3v2 {
 					*/
 				}
 			}
-			int tsize = Util.twentyEightBitByteArrayToInt(sbytes) + header.length; //tag.getTagSize() + header.length;
+			int tsize = Util.twentyEightBitByteArrayToInt(size); 
 			
-			System.out.println("tsize="+tsize);
-			System.out.println("tagpos="+tagPosition);
+			int ttsize = tsize + header.length; //new ID3v230TagHeader(header).getTagSize();
+			//System.out.println("tsize  = "+tsize);
+			System.out.println("ttsize = "+ttsize);
+			//System.out.println("tagpos = "+tagPosition);
 			raf.seek(tagPosition);
-			byte[] zero = new byte[tsize];
+			byte[] zero = new byte[ttsize];
 			raf.write(zero);
-			
+			File f2 = File.createTempFile("tmp", null);
+			RandomAccessFile raf2 = new RandomAccessFile(f2, "rw");
+			buff = new byte[4096*8];
+			raf.seek(ttsize);
+			while ((r = raf.read(buff)) > -1) {
+				raf2.write(buff, 0, r);
+			}
+			raf2.close();
+			raf.close();
+			f.delete();
+			f2.renameTo(f);
 		//}
 	}
 	

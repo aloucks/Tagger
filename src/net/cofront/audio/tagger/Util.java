@@ -12,7 +12,7 @@ public class Util {
 			try {
 				dest[doffset] = source[i];
 			} catch (ArrayIndexOutOfBoundsException e) {
-				System.err.println("doff="+doffset + ", soff="+i);
+				System.err.println("slen="+source.length+", soff="+i + ", dlen="+dest.length + ", doff="+doffset);
 				e.printStackTrace();
 			}
 			doffset++;
