@@ -109,7 +109,7 @@ public class ID3v230TagHeader {
 		bos.reset();
 		bos.write(ID3v2.TAG_IDENTIFIER);
 		bos.write(version);
-		bos.write(flags);
+		bos.write(0); //bos.write(flags);
 		bos.write(size);
 		return bos.toByteArray();
 	}

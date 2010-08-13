@@ -60,7 +60,7 @@ public class ID3v1 {
 		raf.read(tag);
 		if (Arrays.equals(tag, TAG_IDENTIFIER)) {
 			raf.setLength(raf.length() - 128);
-			Tagger.close(raf);
+			raf.close();
 		}
 	}
 	

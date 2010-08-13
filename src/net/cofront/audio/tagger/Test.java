@@ -110,7 +110,7 @@ public class Test {
 		for (int i=0; i<src.length; i++) {
 			fis = new FileInputStream(src[i]);
 			fos = new FileOutputStream(destdir.getAbsolutePath() + "/" + src[i].getName());
-			byte[] b = new byte[4096];
+			byte[] b = new byte[4096*128];
 			int r = -1;
 			while ( (r = fis.read(b)) != -1 ) {
 				fos.write(b, 0, r);
@@ -121,55 +121,6 @@ public class Test {
 		
 	}
 	
-	public static class CloserThread extends Thread {
-		protected boolean isRunning = true;
-		protected boolean lowPriority = false;
-		private Stack<RandomAccessFile> stack = new Stack(); 
-		public void run() {
-			RandomAccessFile raf = null;
-			while (isRunning) {
-				raf = this.pop();
-				try {
-					if (raf != null) {
-						
-						if (lowPriority == true) {
-							//System.out.println("Sleeping..");
-							Thread.sleep(50);
-						}
-						//System.out.println("Closing..");
-						raf.close();
-						
-					}
-				} catch (InterruptedException e) {
-					Thread.currentThread().interrupt();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		public void push(RandomAccessFile raf) {
-			synchronized (stack) {
-				stack.push(raf);
-				//stack.notify();
-			}
-			//stack.notify();
-		}
-		public RandomAccessFile pop() {
-			RandomAccessFile raf = null;
-			
-			synchronized (stack) {
-				try {
-					//stack.wait(1000);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-				if (! stack.isEmpty()) {
-					raf = stack.pop();
-				}
-			}
-			return raf;
-		}
-	}
 }
 
 

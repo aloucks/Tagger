@@ -55,7 +55,7 @@ public class ID3v230GenericFrame implements ID3v230Frame {
 	}
 	
 	public String getFrameIdAsString() {
-		return String.valueOf(id);
+		return new String(id);
 	}
 	
 	public synchronized byte[] getFrameData() {

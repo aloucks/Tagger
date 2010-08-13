@@ -18,19 +18,18 @@ public class Tagger {
 
 	protected static CloserThread closer = new CloserThread();
 
-	public void startCloser() {
-		closer.start();
+	public static void startCloser() {
 		closer.setDaemon(true);
+		closer.start();
 	}
 	
-	public boolean isCloserRunning() {
+	public static boolean isCloserRunning() {
 		return closer.isAlive();
 	}
 	
 	public static void close(Closeable c) {
 		if (! closer.isAlive()) {
-			closer.setDaemon(true);
-			closer.start();
+			startCloser();
 		}
 	}
 	

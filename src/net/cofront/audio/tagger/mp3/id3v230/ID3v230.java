@@ -32,9 +32,10 @@ public class ID3v230 extends ID3v2 {
 	final public static byte FLAG_EXTENDEDHEADER = (1 << (6 - 1)); // bit6 (2nd bit)
 	final public static byte FLAG_EXPERIMENTAL   = (1 << (5 - 1)); // bit5 (3rd bit)
 	private boolean modified = false;
-	private HashMap<String, ArrayList<ID3v230Frame>> framemap = new HashMap<String, ArrayList<ID3v230Frame>>();
-	
-	
+	//private HashMap<String, ArrayList<ID3v230Frame>> framemap = new HashMap<String, ArrayList<ID3v230Frame>>();
+	private ArrayList<ID3v230Frame> framelist = new ArrayList<ID3v230Frame>();
+	private static File ftmp = null;
+	private static RandomAccessFile rtmp = null;
 
 	private ID3v230TagHeader header;
 	private ID3v230ExtendedHeader eheader;	// ID3v2.3.0
@@ -43,63 +44,182 @@ public class ID3v230 extends ID3v2 {
 		ID3v230 oldtag = null;
 	}
 	
-	public static void removeTag(File f) throws FileNotFoundException, IOException, ID3v2Exception {
-		//ID3v230 tag = read(f);
-		//if (tag != null) {
-			RandomAccessFile raf = new RandomAccessFile(f, "rw");
+	public static void removeTag(File f) throws FileNotFoundException, IOException {
+		RandomAccessFile raf = new RandomAccessFile(f, "rw");
+		removeTag(raf);
+		raf.close();
+	}
+	
+	private static synchronized RandomAccessFile getTempFile(boolean reset) throws IOException {
+		if (ftmp == null || rtmp == null) {
+			ftmp = File.createTempFile("tagger", null);
+			ftmp.deleteOnExit();
+			rtmp = new RandomAccessFile(ftmp, "rw");
+		}
+		if (reset) {
+			rtmp.setLength(0);
+			rtmp.seek(0);
+		}
+		return rtmp;
+	}
+	
+	public static synchronized void killTempFile() throws IOException {
+		rtmp.close();
+		ftmp.delete();
+	}
+	
+	public synchronized void write(File f, boolean replace) throws FileNotFoundException, IOException {
+		long start = System.currentTimeMillis();
+		//File ftmp = File.createTempFile("tagger", null);
+		//ftmp.deleteOnExit();
+		RandomAccessFile rtmp;
+		System.out.println("tmpcreate="+(System.currentTimeMillis() - start));
+		RandomAccessFile raf = new RandomAccessFile(f, "rw");
+		boolean foundtag = false;
+		byte[] buff = new byte[4096*32];
+		long tagPosition = 0;
+		byte[] header = new byte[10];
+		byte[] size = new byte[4];
+		int tsize;
+		int ttsize;
+		int r = 0;
+		if (! replace) {
 			raf.seek(0);
-			//tag.getTagSize();
-			//System.out.println(tag.getTagSize());
-			boolean foundtag = false;
-			//boolean foundsync = false;
-			int r = 0;
-			byte[] buff = new byte[2048];
-			long tagPosition = 0;
-			byte[] header = new byte[10];
-			byte[] size = new byte[] { 0x00, 0x00, 0x00, 0x00 }; //new byte[4];
-			//while ( !foundtag && !foundsync && (r = raf.read(buff)) > -1 ) {
-			while ( !foundtag && (r = raf.read(buff)) > -1 ) {
+			//System.out.println("writing tag: " + new String(this.getBytes()));
+			System.out.println("tagsize="+this.getTagSize());
+			rtmp = getTempFile(true);
+			rtmp.write(this.getBytes());
+			System.out.println("len="+raf.length());
+			while ( (r = raf.read(buff)) > -1) {
+				rtmp.write(buff, 0, r);
+			}
+			raf.setLength(0);
+			rtmp.seek(0);
+			while ( (r = rtmp.read(buff)) > -1) {
+				raf.write(buff, 0, r);
+			}
+			return;
+		}
+		else {
+			while ((r = raf.read(buff)) > -1 ) {
+				if (! foundtag) {
+					for (int i=0; i<r; i++) {
+						tagPosition++;
+						Util.rpush(buff[i], header);
+						if (detectHeader(header)) {
+							
+							Util.byteCopy(header, 6, 4, size, 0);
+							tsize = Util.twentyEightBitByteArrayToInt(size); 
+							ttsize = tsize + header.length;
+							tagPosition = tagPosition - header.length;
+							foundtag = true;
+							// if the old tag is the same size or larger
+							// write the new tag and be done
+							//System.out.println("tsize="+tsize);
+							//System.out.println("tagsize="+this.getTagSize());
+							if (tsize >= this.getTagSize()) {
+								this.setPadding(tsize - this.getTagSize());
+								raf.seek(tagPosition);
+								raf.write(this.getBytes());
+								raf.close();
+								return;
+							}
+							
+							
+							// discard the rest of the buffer
+							r = 0; 
+							
+							
+							// have the next read start after old tag
+							raf.seek(tagPosition + ttsize);
+							
+							// write the new tag
+							rtmp = getTempFile(true);
+							rtmp.write(this.getBytes());
+							break;
+						}
+					}
+				}
+				// if we found the tag, r will be 0 and the rest of 
+				// the buffer will be discarded during the current read/write
+				rtmp = getTempFile(false);
+				rtmp.write(buff, 0, r);
+			}	
+			
+			raf.setLength(0);
+			raf.seek(0);
+			
+			if (! foundtag) {
+				//System.out.println("wtf");
+				raf.write(this.getBytes());
+			}
+			rtmp = getTempFile(false);
+			rtmp.seek(0);
+			
+			while ((r = rtmp.read(buff)) > -1) {
+				raf.write(buff, 0, r);
+			}
+
+			raf.close();
+			//killTempFile();
+		}
+		
+		
+	}
+	
+	public static synchronized void removeTag(RandomAccessFile raf) throws IOException {
+		raf.seek(0);
+		
+		boolean foundtag = false;
+		int r = 0;
+		byte[] buff = new byte[4098*32];
+		long tagPosition = 0;
+		byte[] header = new byte[10];
+		byte[] size = new byte[4];
+
+		RandomAccessFile rtmp = getTempFile(true);
+		int tsize;
+		int ttsize;
+		
+		while ((r = raf.read(buff)) > -1 ) {
+			if (! foundtag) {
 				for (int i=0; i<r; i++) {
 					tagPosition++;
 					Util.rpush(buff[i], header);
 					if (detectHeader(header)) {
-						
 						Util.byteCopy(header, 6, 4, size, 0);
-						
 						tagPosition = tagPosition - header.length;
 						foundtag = true;
+						// discard the rest of the buffer
+						r = 0; 
+						tsize = Util.twentyEightBitByteArrayToInt(size); 
+						ttsize = tsize + header.length;
+						// have the next read start after the tag
+						raf.seek(tagPosition + ttsize);
 						break;
 					}
-					/*
-					if ( (header[0] & SYNCBYTES_MASK[0]) > 0 &&  (header[1] & SYNCBYTES_MASK[1]) > 0 ) {
-						System.out.println("Found sync: " + i);
-						foundsync = true;
-						break;
-					}
-					*/
 				}
 			}
-			int tsize = Util.twentyEightBitByteArrayToInt(size); 
-			
-			int ttsize = tsize + header.length; //new ID3v230TagHeader(header).getTagSize();
-			//System.out.println("tsize  = "+tsize);
-			System.out.println("ttsize = "+ttsize);
-			//System.out.println("tagpos = "+tagPosition);
-			raf.seek(tagPosition);
-			byte[] zero = new byte[ttsize];
-			raf.write(zero);
-			File f2 = File.createTempFile("tmp", null);
-			RandomAccessFile raf2 = new RandomAccessFile(f2, "rw");
-			buff = new byte[4096*8];
-			raf.seek(ttsize);
-			while ((r = raf.read(buff)) > -1) {
-				raf2.write(buff, 0, r);
-			}
-			raf2.close();
-			raf.close();
-			f.delete();
-			f2.renameTo(f);
-		//}
+			// if we found the tag, r will be 0 and the rest of 
+			// the buffer will be discarded during the current read/write
+			rtmp.write(buff, 0, r);
+		}				
+
+		// truncate the file
+		raf.setLength(0);
+		
+		raf.seek(0);
+		rtmp.seek(0);
+		
+		// copy the temp data back into the file. deleting the original and renaming
+		// the temp would be faster, but we would loose the original creation date
+		// and any other file properties.
+		while ((r = rtmp.read(buff)) > -1) {
+			raf.write(buff, 0, r);
+		}
+		
+		//rtmp.close();
+		//ftmp.delete();
 	}
 	
 	public static ID3v230 read(File f) throws FileNotFoundException, IOException, ID3v2Exception {
@@ -135,18 +255,22 @@ public class ID3v230 extends ID3v2 {
 				tagPosition++;
 				Util.rpush(buff[i], header);
 				if (detectHeader(header)) {
-					tagPosition = tagPosition - header.length;
+					
+					//System.out.println("found header");
+
 					tag = new ID3v230();
 					tag.header = new ID3v230TagHeader(header);
 					if (tag.header.version[0] != 0x03) {
 						return null;
 					}
 					int tsize = tag.header.getTagSize();
-					
+					//System.out.println("tsize=" + tsize);
 					int frameoffset = 0;
 					buff = new byte[tsize];
-					raf.seek(tagPosition);
+					raf.seek(tagPosition); // should be the first byte after the header
 					r = raf.read(buff);
+					
+					//System.out.println(new String(buff));
 					
 					if (r != buff.length) {
 						// something bad happened
@@ -184,9 +308,12 @@ public class ID3v230 extends ID3v2 {
 							}
 							
 							fdata = new byte[fdatasize];
+							//System.out.println("fdatasize=" + fdatasize);
 							Util.byteCopy(buff, x+1, fdatasize, fdata, 0);
 							
 							frame.setFrameData(fdata);
+							//System.out.println("frame=" + frame.getFrameIdAsString());
+							//System.out.println("fdata="+new String(fdata));
 							x += fdatasize;
 							if (fdatasize == fdata.length) {
 								tag.addFrame(frame);
@@ -209,6 +336,10 @@ public class ID3v230 extends ID3v2 {
 				*/
 			}
 		}
+		int psize = tag.header.getTagSize() - tag.getFramesBytes().length;
+		if (psize != tag.getPaddingSize()) {
+			tag.setPadding(psize);
+		}
 		return tag;
 	}
 	
@@ -220,6 +351,7 @@ public class ID3v230 extends ID3v2 {
 	}
 	
 	public void setPadding(int psize) {
+		modified = true;
 		if (eheader == null) {
 			eheader = new ID3v230ExtendedHeader(Util.intToByteArray(6), new byte[] { 0, 0 }, Util.intToByteArray(psize), new byte[] { 0, 0 } );
 		}
@@ -236,48 +368,83 @@ public class ID3v230 extends ID3v2 {
 			return eheader.getPaddingSize();
 		}
 	}
-	
+	/*
 	private synchronized void validatekey(String frameId) {
 		if (! framemap.containsKey(frameId)) {
 			framemap.put(frameId, new ArrayList<ID3v230Frame>());
 		}
 	}
+	*/
 	
 	public synchronized void addFrame(ID3v230Frame frame) {
 		modified = true;
+		/*
 		String frameId = frame.getFrameIdAsString();
 		validatekey(frameId);
 		framemap.get(frameId).add(frame);
+		*/
+		framelist.add(frame);
 	}
 
-	public synchronized void setFrame(ID3v230Frame frame) {
+	public synchronized void setFrame(ID3v230Frame frame) throws Exception {
 		modified = true;
+		/*
 		String frameId = frame.getFrameIdAsString();
 		validatekey(frameId);
 		removeFrames(frameId);
 		ArrayList<ID3v230Frame> list = new ArrayList<ID3v230Frame>();
 		list.add(frame);
 		framemap.put(frameId, list);
+		*/
+		framelist.add(frame);
+		throw new Exception("Not implemented");
 	}
 	
 	public synchronized void setFrames(String frameId, ArrayList<ID3v230Frame> frames) {
 		modified = true;
+		/*
 		validatekey(frameId);
 		removeFrames(frameId);
 		framemap.put(frameId, frames);
+		*/
+		framelist.addAll(frames);
 	}
 	
 	public synchronized List<ID3v230Frame> getFrames(String frameId) {
+		/*
 		validatekey(frameId);
 		return framemap.get(frameId);
+		*/
+		ArrayList<ID3v230Frame> tmp = new ArrayList<ID3v230Frame>();
+		Iterator<ID3v230Frame> i = framelist.iterator();
+		while (i.hasNext()) {
+			ID3v230Frame f = i.next();
+			if (f.getFrameIdAsString().equals(frameId)) {
+				tmp.add(i.next());
+			}
+		}
+		return tmp;
 	}
 	
 	public synchronized void removeFrames(String frameId) {
 		modified = true;
+		/*
 		framemap.remove(frameId);
+		*/
+		ArrayList<ID3v230Frame> tmp = new ArrayList<ID3v230Frame>();
+		Iterator<ID3v230Frame> i = framelist.iterator();
+		while (i.hasNext()) {
+			ID3v230Frame f = i.next();
+			if (! f.getFrameIdAsString().equals(frameId)) {
+				tmp.add(i.next());
+			}
+		}
+		framelist = tmp;
+		
 	}
 	
 	public synchronized ArrayList<ID3v230Frame> getAllFrames() {
+		/*
 		ArrayList<ID3v230Frame> a = new ArrayList<ID3v230Frame>();
 		Set<String> keys = framemap.keySet();
 		Iterator<String> i = keys.iterator();
@@ -285,6 +452,8 @@ public class ID3v230 extends ID3v2 {
 			a.addAll(framemap.get(i.next()));
 		}
 		return a;
+		*/
+		return framelist;
 	}
 	
 	public synchronized byte[] getFramesBytes() throws IOException {
@@ -335,7 +504,7 @@ public class ID3v230 extends ID3v2 {
 	}
 	
 	public synchronized byte[] getBytes() throws IOException {
-		
+		/*
 		byte[] ehbytes = new byte[0];
 		byte[] fbytes = this.getFramesBytes();
 		byte[] padding;
@@ -365,13 +534,29 @@ public class ID3v230 extends ID3v2 {
 		
 		bos.reset();
 		bos.write(header.getBytes());
-		bos.write(ehbytes);
+		//bos.write(ehbytes);
 		bos.write(fbytes);
+		if (padding.length == 0) {
+			//padding = new byte[128];
+		}
 		bos.write(padding);
 		
 		modified = false;
 		return bos.toByteArray();
-
+		*/
+		
+		byte[] hbytes = header.getBytes();
+		byte[] fbytes = this.getFramesBytes();
+		
+		bos.reset();
+		
+		
+		bos.write(hbytes);
+		bos.write(fbytes);
+		bos.write(new byte[this.getPaddingSize()]);
+		modified = false;
+		return bos.toByteArray();
+		
 	}
 	
 	/**
