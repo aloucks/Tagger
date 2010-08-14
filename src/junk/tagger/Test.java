@@ -41,6 +41,8 @@ public class Test {
 		File testdir = new File("testfiles/mp3");
 		copyFiles(testdir, workingdir);
 		
+		System.exit(1);
+		
 		File file[] = workingdir.listFiles();
 		
 		RandomAccessFile[] rafArray = new RandomAccessFile[file.length];
