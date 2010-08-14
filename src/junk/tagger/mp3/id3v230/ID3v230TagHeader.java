@@ -1,10 +1,11 @@
-package net.cofront.audio.tagger.mp3.id3v230;
+package junk.tagger.mp3.id3v230;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import net.cofront.audio.tagger.Util;
-import net.cofront.audio.tagger.mp3.ID3v2;
+import junk.tagger.Util;
+import junk.tagger.mp3.ID3v2;
+
 
 public class ID3v230TagHeader {
 	

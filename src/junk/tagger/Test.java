@@ -1,4 +1,4 @@
-package net.cofront.audio.tagger;
+package junk.tagger;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,8 +13,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Stack;
 
-import net.cofront.audio.tagger.mp3.ID3v1;
-import net.cofront.audio.tagger.mp3.ID3v2Exception;
+import junk.tagger.mp3.ID3v1;
+import junk.tagger.mp3.ID3v2Exception;
+
 
 public class Test {
 	public static String NL = System.getProperty("line.separator");

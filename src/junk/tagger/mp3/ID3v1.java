@@ -1,4 +1,4 @@
-package net.cofront.audio.tagger.mp3;
+package junk.tagger.mp3;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -6,8 +6,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
 
-import net.cofront.audio.tagger.Tagger;
-import net.cofront.audio.tagger.Util;
+import junk.tagger.Tagger;
+import junk.tagger.Util;
+
 
 public class ID3v1 {
 	public static byte[] TAG_IDENTIFIER = ("TAG").getBytes();

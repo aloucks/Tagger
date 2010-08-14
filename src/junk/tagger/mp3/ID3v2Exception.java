@@ -1,4 +1,4 @@
-package net.cofront.audio.tagger.mp3;
+package junk.tagger.mp3;
 
 public class ID3v2Exception extends Exception {
 

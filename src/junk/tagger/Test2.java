@@ -1,12 +1,13 @@
-package net.cofront.audio.tagger;
+package junk.tagger;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import net.cofront.audio.tagger.CloserThread;
-import net.cofront.audio.tagger.mp3.ID3v1;
-import net.cofront.audio.tagger.mp3.ID3v2Exception;
+import junk.tagger.CloserThread;
+import junk.tagger.mp3.ID3v1;
+import junk.tagger.mp3.ID3v2Exception;
+
 
 public class Test2 {
 

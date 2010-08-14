@@ -1,4 +1,4 @@
-package net.cofront.audio.tagger;
+package junk.tagger;
 
 import java.io.Closeable;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package net.cofront.audio.tagger.mp3.id3v230;
+package junk.tagger.mp3.id3v230;
 
 import java.io.IOException;
 

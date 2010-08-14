@@ -1,4 +1,4 @@
-package net.cofront.audio.tagger;
+package junk.tagger;
 
 public class Util {
 	public static byte setBit(byte b, int bit) {

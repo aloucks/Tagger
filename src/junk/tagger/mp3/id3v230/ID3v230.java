@@ -1,4 +1,4 @@
-package net.cofront.audio.tagger.mp3.id3v230;
+package junk.tagger.mp3.id3v230;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -12,12 +12,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import net.cofront.audio.tagger.ID3v2Frame;
-import net.cofront.audio.tagger.Tagger;
-import net.cofront.audio.tagger.Util;
-import net.cofront.audio.tagger.mp3.ID3v2;
-import net.cofront.audio.tagger.mp3.ID3v2Exception;
-import net.cofront.audio.tagger.mp3.ID3v2.Header;
+import junk.tagger.ID3v2Frame;
+import junk.tagger.Tagger;
+import junk.tagger.Util;
+import junk.tagger.mp3.ID3v2;
+import junk.tagger.mp3.ID3v2Exception;
+import junk.tagger.mp3.ID3v2.Header;
+
 
 /**
  * http://id3.org/d3v2.3.0
@@ -241,6 +242,7 @@ public class ID3v230 extends ID3v2 {
 		byte[] fsize = new byte[4];
 		byte[] fflags = new byte[2];
 		byte[] fheader = new byte[10];
+		final byte[] fcleanheader = new byte[10];
 		byte[] fdata = null;
 		
 		int hbytecount = 0;
@@ -306,15 +308,38 @@ public class ID3v230 extends ID3v2 {
 								// (or there is no extended header)
 								break;
 							}
+
+							//System.out.println();
 							
-							fdata = new byte[fdatasize];
 							//System.out.println("fdatasize=" + fdatasize);
+							System.out.println("frame=" + frame.getFrameIdAsString());
+							//System.out.println("fheader=" + new String(fheader));
+							fdata = new byte[fdatasize];
 							Util.byteCopy(buff, x+1, fdatasize, fdata, 0);
 							
+							
 							frame.setFrameData(fdata);
-							//System.out.println("frame=" + frame.getFrameIdAsString());
-							//System.out.println("fdata="+new String(fdata));
+							
+							System.out.println(" fdata="+new String(fdata));
+							
+						
+							//System.out.println("x="+x);
+							Util.byteCopy(fcleanheader, 0, 10, fheader, 0);
+							//System.out.println("fheadercleaned="+new String(fheader));
 							x += fdatasize;
+							//System.out.println(" x="+x);
+							/*
+							System.out.println(" buff[x]="+(char)buff[x]);
+							System.out.println(" buff[x+1]="+(char)buff[x+1]);
+							System.out.println(" buff[x+2]="+(char)buff[x+2]);
+							System.out.println(" buff[x+3]="+(char)buff[x+3]);
+							System.out.println(" buff[x+4]="+(char)buff[x+4]);
+							System.out.println(" buff[x+5]="+(char)buff[x+5]);
+							System.out.println(" buff[x+6]="+(char)buff[x+6]);
+							System.out.println(" buff[x+7]="+(char)buff[x+7]);
+							System.out.println(" buff[x+8]="+(char)buff[x+8]);
+							System.out.println(" buff[x+9]="+(char)buff[x+9]);
+							*/
 							if (fdatasize == fdata.length) {
 								tag.addFrame(frame);
 							}
@@ -324,7 +349,7 @@ public class ID3v230 extends ID3v2 {
 						}
 					}
 					foundtag = true; 
-					Tagger.close(raf);
+					raf.close();
 					break;
 				}
 				/*

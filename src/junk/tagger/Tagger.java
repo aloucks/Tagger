@@ -1,4 +1,4 @@
-package net.cofront.audio.tagger;
+package junk.tagger;
 
 import java.io.Closeable;
 import java.io.File;
@@ -11,8 +11,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import net.cofront.audio.tagger.mp3.ID3v1;
-import net.cofront.audio.tagger.mp3.ID3v2;
+import junk.tagger.mp3.ID3v1;
+import junk.tagger.mp3.ID3v2;
+
 
 public class Tagger {
 

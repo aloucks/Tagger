@@ -1,9 +1,10 @@
-package net.cofront.audio.tagger.mp3;
+package junk.tagger.mp3;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import net.cofront.audio.tagger.Util;
+import junk.tagger.Util;
+
 
 public abstract class ID3v2 {
 	

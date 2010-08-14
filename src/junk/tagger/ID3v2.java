@@ -1,4 +1,4 @@
-package net.cofront.audio.tagger;
+package junk.tagger;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -11,7 +11,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import net.cofront.audio.tagger.mp3.ID3v2Exception;
+import junk.tagger.mp3.ID3v2Exception;
+
 
 public class ID3v2 {
 	
