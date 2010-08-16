@@ -1,28 +1,56 @@
 package net.cofront.audio.tag;
 
+import java.nio.ByteBuffer;
+
 public class ID3v230 {
 	public final static byte[] TAG_IDENTIFIER = ("ID3").getBytes();
 	
 	final public static int FLAG_UNSYNCHRONIZED = (1 << 7); // bit7 (1st bit)
 	final public static int FLAG_EXTENDEDHEADER = (1 << 6); // bit6 (2nd bit)
 	final public static int FLAG_EXPERIMENTAL   = (1 << 5); // bit5 (3rd bit)
-	
 	final public static int EH_FLAG_CRC         = (1 << 7); // bit7 (1st bit)
 	
-	byte[] header = new byte[10];  
-	byte[] eheader1 = new byte[6]; // size, flags, padding
-	byte[] eheader2 = new byte[4]; // crc
+	final public static int OPT_DISCARDEXTHEADER = (1 << 1);
 	
-	/*
-	public int[] getVersion() {
-		return new int[] { header[3], header[4] };
+	
+	
+	byte[] header = new byte[10];  
+	byte[] eheader1 = new byte[10]; // size, flags, padding
+	byte[] eheader2 = new byte[4];  // crc
+	
+	private int options = 0;
+	
+	public ID3v230(byte[] header) {
+		this();
+		this.header = header;
 	}
 	
-	public void setVersion(int major, int minor) {
+	public ID3v230() {
+		this.setVersion(3, 0);
+		this.setOption(OPT_DISCARDEXTHEADER, true);
+	}
+	
+	public boolean getOption(int opt) {
+		return (options & opt) > 0 ? true : false;
+	}
+	
+	public void setOption(int opt, boolean on) {
+		if (on) {
+			options |= opt;
+		}
+		else {
+			options &= ~opt;
+		}
+	}
+	
+	public int[] getVersion() {
+		return ByteBuffer.wrap(header, 3, 2).asIntBuffer().array();
+	}
+	
+	protected void setVersion(int major, int minor) {
 		header[3] = (byte)major;
 		header[4] = (byte)minor;
 	}
-	*/
 	
 	public boolean getFlag(int flag) {
 		return (header[5] & flag) > 0 ? true : false;
@@ -38,45 +66,47 @@ public class ID3v230 {
 	}
 	
 	public int getSize() {
-		return Util.twentyEightBitByteArrayToInt(new byte[] { header[6], header[7], header[8], header[9] });
+		return Util.twentyEightBitByteArrayToInt(ByteBuffer.wrap(header, 6, 4).array()) ;
 	}
 	
-	public void setSize(int size) {
+	private void setSize(int size) {
 		byte[] tsize = Util.intToTwentyEightBitByteArray(size);
 		Util.byteCopy(tsize, 0, 4, header, 6);
 	}
-	/*
-	public int getExtendedHeaderSize() {
-		return Util.byteArrayToInt(new byte[] { eheader[0], eheader[1], eheader[2], eheader[3] });
+
+	protected int getExtendedHeaderSize() {
+		return Util.byteArrayToInt(ByteBuffer.wrap(eheader1, 0, 4).array()) ;
 	}
-	*/
-	public int getPaddingSize() {
-		byte[] psize = new byte[4];
-		Util.byteCopy(eheader1, 0, 4, psize, 0);
-		return Util.byteArrayToInt(psize);
-	}
-	/*
-	public void setExtendedHeaderSize(int size) {
+	
+	private void setExtendedHeaderSize(int size) {
 		byte[] tsize = Util.intToByteArray(size);
-		Util.byteCopy(tsize, 0, 4, eheader, 0);
+		Util.byteCopy(tsize, 0, 4, eheader1, 0);
 	}
 
-	public boolean getExtendedHeaderFlag(byte flag) {
-		return (eheader[4] & flag) > 0 ? true : false;
+	protected boolean getExtendedHeaderFlag(byte flag) {
+		return (eheader1[4] & flag) > 0 ? true : false;
 	}
 	
-	public void setExtendedHeaderFlag(byte flag, boolean on) {
+	protected void setExtendedHeaderFlag(byte flag, boolean on) {
 		if (on) {
-			eheader[4] |= flag;
+			eheader1[4] |= flag;
 		}
 		else {
-			eheader[4] &= ~flag;
+			eheader1[4] &= ~flag;
 		}
 	}
-	*/
+	
+	public int getPaddingSize() {
+		return Util.byteArrayToInt(ByteBuffer.wrap(eheader1, 0, 4).array());
+	}
+	
+	public void setPaddingSize(int psize) {
+		byte[] psizeb = Util.intToByteArray(psize);
+		Util.byteCopy(psizeb, 0, 4, eheader1, 0);
+	}
 	
 	public int getCRC() {
-		return eheader2[0] | eheader2[1] | eheader2[2] | eheader2[3];
+		return Util.byteArrayToInt(eheader2);
 	}
 	
 	public void setCRC(int crc) {

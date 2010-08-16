@@ -16,13 +16,7 @@ public class ID3v230Frame {
 	private byte[] fdata = null;
 	
 	public byte[] getFrameId() {
-		/*
-		byte[] frameId = new byte[4];
-		Util.byteCopy(fheader, 0, 4, frameId, 0);
-		return frameId;
-		*/
 		return ByteBuffer.wrap(fheader, 0 ,4).array();
-		
 	}
 	
 	public int getSize() {
@@ -31,7 +25,7 @@ public class ID3v230Frame {
 		return Util.byteArrayToInt(size);
 	}
 	
-	public void setSize(int size) {
+	protected void setSize(int size) {
 		byte[] tsize = Util.intToTwentyEightBitByteArray(size);
 		Util.byteCopy(tsize, 4, 4, fheader, 4);
 	}
@@ -64,15 +58,40 @@ public class ID3v230Frame {
 		return offset;
 	}
 	
+	public int getDecompressedSize() {
+		return Util.byteArrayToInt(ByteBuffer.wrap(feheader, 0, 4).array());
+	}
+	
+	public byte getEncryptionMethod() {
+		int offset = 0;
+		if (getFlag(FLAG_COMPRESSION)) {
+			offset += 4;
+		}
+		return feheader[offset];
+	}
+	
+	public byte getFlagGroup() {
+		int offset = 0;
+		if (getFlag(FLAG_COMPRESSION)) {
+			offset += 4;
+		}
+		if (getFlag(FLAG_ENCRYPTION)) {
+			offset += 1;
+		}
+		return feheader[offset];
+	}
+	
 	public byte[] getData() {
-		int offset = this.getDataOffset();
-		ByteBuffer bb = ByteBuffer.wrap(fdata, offset, fdata.length - offset);
-		return bb.array();
+		return fdata;
 	}
 
 	
 	public void setData(byte[] data) {
 		fdata = data;
 		setSize(data.length);
+	}
+	
+	protected void setFrameExtendedHeader(byte[] feheader) {
+		this.feheader = feheader;
 	}
 }
