@@ -1,5 +1,7 @@
 package net.cofront.audio.tag;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class ID3v230Frame {
@@ -93,5 +95,21 @@ public class ID3v230Frame {
 	
 	protected void setFrameExtendedHeader(byte[] feheader) {
 		this.feheader = feheader;
+	}
+	
+	public byte[] getBytes() throws IOException {
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		bos.write(fheader);
+		if (getFlag(FLAG_COMPRESSION)) {
+			bos.write(Util.intToByteArray(getDecompressedSize()));
+		}
+		if (getFlag(FLAG_ENCRYPTION)) {
+			bos.write(getEncryptionMethod());
+		}
+		if (getFlag(FLAG_GROUP)) {
+			bos.write(getFlagGroup());
+		}
+		bos.write(fdata);
+		return bos.toByteArray();
 	}
 }

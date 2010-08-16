@@ -11,6 +11,7 @@ public class ID3v230 {
 	final public static int EH_FLAG_CRC         = (1 << 7); // bit7 (1st bit)
 	
 	final public static int OPT_DISCARDEXTHEADER = (1 << 1);
+	final public static int OPT_SEARCHONWRITE    = (1 << 2);
 	
 	
 	
