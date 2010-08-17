@@ -1,6 +1,10 @@
 package net.cofront.audio.tag;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 public class ID3v230 {
 	public final static byte[] TAG_IDENTIFIER = ("ID3").getBytes();
@@ -12,12 +16,15 @@ public class ID3v230 {
 	
 	final public static int OPT_DISCARDEXTHEADER = (1 << 1);
 	final public static int OPT_SEARCHONWRITE    = (1 << 2);
-	
-	
+	final public static int OPT_USYNCHRONIZATION = (1 << 3);
 	
 	byte[] header = new byte[10];  
 	byte[] eheader1 = new byte[10]; // size, flags, padding
 	byte[] eheader2 = new byte[4];  // crc
+	
+	private ArrayList<ID3v230Frame> frameList = new ArrayList<ID3v230Frame>();
+	private HashMap<String, ArrayList<ID3v230Frame>> frameMap = new HashMap<String, ArrayList<ID3v230Frame>>();
+	
 	
 	private int options = 0;
 	
@@ -29,6 +36,8 @@ public class ID3v230 {
 	public ID3v230() {
 		this.setVersion(3, 0);
 		this.setOption(OPT_DISCARDEXTHEADER, true);
+		this.setOption(OPT_SEARCHONWRITE, true);
+		this.setOption(OPT_USYNCHRONIZATION, false);
 	}
 	
 	public boolean getOption(int opt) {
@@ -113,6 +122,34 @@ public class ID3v230 {
 	public void setCRC(int crc) {
 		byte[] data = Util.intToByteArray(crc);
 		Util.byteCopy(data, 0, 4, eheader2, 0);
+	}
+	
+	public ID3v230Frame[] getFrames(String frameId) {
+		return (ID3v230Frame[])frameMap.get(frameId).toArray();
+	}
+	
+	public void addFrame(ID3v230Frame frame) throws IOException {
+		String frameId = frame.getBytes().toString();
+		ArrayList<ID3v230Frame> typeList = frameMap.get(frameId);
+		if (typeList == null) {
+			typeList = new ArrayList<ID3v230Frame>();
+			frameMap.put(frameId, typeList);
+		}
+		typeList.add(frame);
+		frameList.add(frame);
+	}
+	
+	public void removeFrames(String frameId) {
+		frameMap.remove(frameId);
+		ArrayList<ID3v230Frame> frameList = new ArrayList<ID3v230Frame>();
+		Iterator<ID3v230Frame> i = this.frameList.iterator();
+		while (i.hasNext()) {
+			ID3v230Frame frame = i.next();
+			if (! frame.getFrameId().toString().equalsIgnoreCase(frameId)) {
+				frameList.add(frame);
+			}
+		}
+		this.frameList = frameList;
 	}
 	
 }
